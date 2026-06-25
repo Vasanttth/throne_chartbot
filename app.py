@@ -4,6 +4,7 @@ Run: streamlit run app.py
 """
 
 import os
+import sys
 import subprocess
 from pathlib import Path
 
@@ -22,7 +23,7 @@ st.set_page_config(
 if not Path("vectorstore").exists():
     with st.spinner("Building knowledge base..."):
         result = subprocess.run(
-            ["python", "ingest.py"],
+            [sys.executable, "ingest.py"],
             capture_output=True,
             text=True
         )
