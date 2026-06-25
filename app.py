@@ -6,6 +6,11 @@ Run: streamlit run app.py
 import os
 import streamlit as st
 from chatbot import load_chain
+import subprocess
+from pathlib import Path
+
+if not Path("vectorstore").exists():
+    subprocess.run(["python", "ingest.py"], check=True)
 
 # ── Page configuration ──────────────────────────────────────────────────────
 st.set_page_config(
