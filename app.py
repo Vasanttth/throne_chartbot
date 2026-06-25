@@ -4,13 +4,11 @@ Run: streamlit run app.py
 """
 
 import os
-import streamlit as st
-from chatbot import load_chain
 import subprocess
 from pathlib import Path
 
-if not Path("vectorstore").exists():
-    subprocess.run(["python", "ingest.py"], check=True)
+import streamlit as st
+from chatbot import load_chain
 
 # ── Page configuration ──────────────────────────────────────────────────────
 st.set_page_config(
@@ -20,42 +18,40 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ── Custom CSS — dark royal theme matching Throne Recliners ─────────────────
+# ── Build vectorstore if missing ─────────────────────────────────────────────
+if not Path("vectorstore").exists():
+    with st.spinner("Building knowledge base..."):
+        result = subprocess.run(
+            ["python", "ingest.py"],
+            capture_output=True,
+            text=True
+        )
+
+        if result.returncode != 0:
+            st.error("Failed to build vectorstore.")
+            st.code(result.stderr)
+            st.stop()
+
+# ── Custom CSS ───────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-            /* Force all text to white */
-
-html, body {
-    color: #ffffff !important;
-}
-
-[data-testid="stMarkdownContainer"],
-[data-testid="stMarkdownContainer"] * {
-    color: #ffffff !important;
-}
-
-[data-testid="stChatMessageContent"],
-[data-testid="stChatMessageContent"] * {
-    color: #ffffff !important;
-}
-
-[data-testid="stSidebar"] * {
-    color: #ffffff !important;
-}
-
-p, span, div, label, li {
-    color: #ffffff !important;
-}
-/* ---- Global ---- */
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Inter:wght@400;500&display=swap');
 
 html, body, [data-testid="stAppViewContainer"] {
     background-color: #0f0f1a;
-    color: #e8e0d0;
+    color: #ffffff !important;
     font-family: 'Inter', sans-serif;
 }
 
-/* ---- Header ---- */
+[data-testid="stMarkdownContainer"],
+[data-testid="stMarkdownContainer"] *,
+[data-testid="stChatMessageContent"],
+[data-testid="stChatMessageContent"] *,
+[data-testid="stSidebar"] *,
+p, span, div, label, li, strong {
+    color: #ffffff !important;
+}
+
 .throne-header {
     background: linear-gradient(135deg, #1a1035 0%, #2d1b5e 60%, #1a1035 100%);
     border: 1px solid #4a3580;
@@ -64,20 +60,21 @@ html, body, [data-testid="stAppViewContainer"] {
     text-align: center;
     margin-bottom: 24px;
 }
+
 .throne-header h1 {
     font-family: 'Playfair Display', serif;
     font-size: 2rem;
-    color: #d4af37;
+    color: #d4af37 !important;
     margin: 0 0 6px;
     letter-spacing: 1px;
 }
+
 .throne-header p {
-    color: #b8a9e0;
+    color: #ffffff !important;
     font-size: 0.9rem;
     margin: 0;
 }
 
-/* ---- Chat messages ---- */
 [data-testid="stChatMessage"] {
     background: #16162a !important;
     border: 1px solid #2a2a45 !important;
@@ -85,15 +82,13 @@ html, body, [data-testid="stAppViewContainer"] {
     margin-bottom: 8px;
 }
 
-/* ---- Chat input ---- */
 [data-testid="stChatInput"] textarea {
     background: #1c1c30 !important;
     border: 1px solid #4a3580 !important;
-    color: #e8e0d0 !important;
+    color: #ffffff !important;
     border-radius: 10px !important;
 }
 
-/* ---- Source expander ---- */
 .source-card {
     background: #1c1c30;
     border-left: 3px solid #d4af37;
@@ -101,22 +96,23 @@ html, body, [data-testid="stAppViewContainer"] {
     padding: 10px 14px;
     margin-bottom: 8px;
     font-size: 0.8rem;
-    color: #b0a8c8;
+    color: #ffffff !important;
     line-height: 1.5;
 }
+
 .source-label {
-    color: #d4af37;
+    color: #d4af37 !important;
     font-weight: 600;
     font-size: 0.75rem;
     letter-spacing: 0.5px;
     margin-bottom: 4px;
 }
 
-/* ---- Sidebar ---- */
 [data-testid="stSidebar"] {
     background: #121220 !important;
     border-right: 1px solid #2a2a45;
 }
+
 .sidebar-section {
     background: #1a1a30;
     border: 1px solid #2a2a45;
@@ -124,43 +120,34 @@ html, body, [data-testid="stAppViewContainer"] {
     padding: 14px;
     margin-bottom: 14px;
 }
+
 .sidebar-section h4 {
-    color: #d4af37;
+    color: #d4af37 !important;
     font-size: 0.8rem;
     letter-spacing: 1px;
     text-transform: uppercase;
     margin: 0 0 10px;
 }
 
-/* ---- Quick question buttons ---- */
 .stButton > button {
     background: #1e1e35 !important;
     border: 1px solid #3a2f6e !important;
-    color: #c8bef0 !important;
+    color: #ffffff !important;
     border-radius: 8px !important;
     font-size: 0.78rem !important;
     text-align: left !important;
     padding: 6px 10px !important;
     width: 100% !important;
-    transition: all 0.2s;
 }
+
 .stButton > button:hover {
     background: #2d2050 !important;
     border-color: #d4af37 !important;
     color: #d4af37 !important;
 }
 
-/* ---- Badge ---- */
-.badge {
-    display: inline-block;
-    background: #2d1b5e;
-    color: #d4af37;
-    border: 1px solid #4a3580;
-    border-radius: 20px;
-    padding: 2px 10px;
-    font-size: 0.72rem;
-    font-weight: 500;
-    margin: 2px;
+a {
+    color: #d4af37 !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -205,11 +192,18 @@ if "pending_question" not in st.session_state:
 # ── Error state ───────────────────────────────────────────────────────────────
 if st.session_state.get("load_error"):
     st.error(
-        f"⚠️ Could not load the chatbot: {st.session_state.load_error}\n\n"
-        "**Checklist:**\n"
-        "1. Run `python ingest.py` first to build the vector store.\n"
-        "2. Make sure Ollama is running (`ollama serve`).\n"
-        "3. Pull the model: `ollama pull llama3.2`"
+        f"""
+⚠️ Could not load the chatbot.
+
+Error:
+{st.session_state.load_error}
+
+Checklist:
+1. Make sure `GROQ_API_KEY` is added in Streamlit Secrets.
+2. Make sure `requirements.txt` includes `langchain-groq`.
+3. Make sure your `data/` folder contains your `.txt` knowledge file.
+4. Restart or reboot the app.
+"""
     )
     st.stop()
 
@@ -218,7 +212,7 @@ with st.sidebar:
     st.markdown("""
     <div class="sidebar-section">
         <h4>🛋️ About Throne Recliners</h4>
-        <p style="font-size:0.8rem; color:#b0a8c8; line-height:1.6;">
+        <p style="font-size:0.8rem; line-height:1.6;">
         Based in <b style="color:#d4af37">Thoothukudi, Tamil Nadu</b>,
         Throne Recliners crafts premium customizable recliners & furniture
         for homes, theatres, and offices across India.
@@ -236,12 +230,13 @@ with st.sidebar:
         "What recliners do you have?",
         "What is the price of a recliner?",
         "Can I customize my recliner?",
-        "What is the cheapest product?",
         "Do you deliver across India?",
         "How can I contact Throne Recliners?",
-        "What sofa collections are available?",
+        "Where are you located?",
+        "Do you have a store in Chennai?",
         "Do you make home theatre recliners?",
     ]
+
     for q in quick_questions:
         if st.button(q, key=f"quick_{q}", use_container_width=True):
             st.session_state.pending_question = q
@@ -250,6 +245,7 @@ with st.sidebar:
     st.markdown("---")
 
     col1, col2 = st.columns(2)
+
     with col1:
         if st.button("🗑️ Clear Chat", use_container_width=True):
             st.session_state.messages = [
@@ -266,9 +262,9 @@ with st.sidebar:
 
     st.markdown("---")
     st.markdown("""
-    <div style="font-size:0.75rem; color:#6b6b8a; text-align:center;">
-        Powered by <b>Ollama + LangChain</b><br>
-        <a href="https://thronerecliners.in" style="color:#d4af37;">thronerecliners.in</a>
+    <div style="font-size:0.75rem; text-align:center;">
+        Powered by <b>Groq + LangChain</b><br>
+        <a href="https://thronerecliners.in">thronerecliners.in</a>
     </div>
     """, unsafe_allow_html=True)
 
@@ -278,58 +274,42 @@ for msg in st.session_state.messages:
     with st.chat_message(msg["role"], avatar=avatar):
         st.markdown(msg["content"])
 
-# ── Handle quick question from sidebar ───────────────────────────────────────
+# ── Common function ───────────────────────────────────────────────────────────
+def ask_bot(user_input):
+    st.session_state.messages.append({"role": "user", "content": user_input})
+
+    with st.chat_message("user", avatar="👤"):
+        st.markdown(user_input)
+
+    with st.chat_message("assistant", avatar="🛋️"):
+        with st.spinner("Thinking…"):
+            result = st.session_state.chain.invoke({"question": user_input})
+
+        answer = result["answer"]
+        sources = result.get("source_documents", [])
+
+        st.markdown(answer)
+
+        if show_sources and sources:
+            with st.expander("📄 Retrieved Sources"):
+                for i, doc in enumerate(sources[:3], 1):
+                    snippet = doc.page_content.strip()[:250]
+                    st.markdown(
+                        f'<div class="source-card">'
+                        f'<div class="source-label">SOURCE {i}</div>'
+                        f'{snippet}…</div>',
+                        unsafe_allow_html=True,
+                    )
+
+    st.session_state.messages.append({"role": "assistant", "content": answer})
+
+# ── Handle quick question ─────────────────────────────────────────────────────
 if st.session_state.pending_question:
     user_input = st.session_state.pending_question
     st.session_state.pending_question = None
-
-    st.session_state.messages.append({"role": "user", "content": user_input})
-    with st.chat_message("user", avatar="👤"):
-        st.markdown(user_input)
-
-    with st.chat_message("assistant", avatar="🛋️"):
-        with st.spinner("Thinking…"):
-            result = st.session_state.chain.invoke({"question": user_input})
-        answer  = result["answer"]
-        sources = result.get("source_documents", [])
-        st.markdown(answer)
-
-        if show_sources and sources:
-            with st.expander("📄 Retrieved Sources"):
-                for i, doc in enumerate(sources[:3], 1):
-                    snippet = doc.page_content.strip()[:250]
-                    st.markdown(
-                        f'<div class="source-card">'
-                        f'<div class="source-label">SOURCE {i}</div>'
-                        f'{snippet}…</div>',
-                        unsafe_allow_html=True,
-                    )
-
-    st.session_state.messages.append({"role": "assistant", "content": answer})
+    ask_bot(user_input)
     st.rerun()
 
-# ── Chat input box ────────────────────────────────────────────────────────────
+# ── Chat input ────────────────────────────────────────────────────────────────
 if user_input := st.chat_input("Ask about products, pricing, customization…"):
-    st.session_state.messages.append({"role": "user", "content": user_input})
-    with st.chat_message("user", avatar="👤"):
-        st.markdown(user_input)
-
-    with st.chat_message("assistant", avatar="🛋️"):
-        with st.spinner("Thinking…"):
-            result = st.session_state.chain.invoke({"question": user_input})
-        answer  = result["answer"]
-        sources = result.get("source_documents", [])
-        st.markdown(answer)
-
-        if show_sources and sources:
-            with st.expander("📄 Retrieved Sources"):
-                for i, doc in enumerate(sources[:3], 1):
-                    snippet = doc.page_content.strip()[:250]
-                    st.markdown(
-                        f'<div class="source-card">'
-                        f'<div class="source-label">SOURCE {i}</div>'
-                        f'{snippet}…</div>',
-                        unsafe_allow_html=True,
-                    )
-
-    st.session_state.messages.append({"role": "assistant", "content": answer})
+    ask_bot(user_input)
